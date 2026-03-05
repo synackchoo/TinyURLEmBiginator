@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tiny URL EmBiginator</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main id="app" class="app">
+      <section id="history-panel" class="history-panel">
+        <p id="history-empty" class="history-empty">No resolved URLs yet.</p>
+        <ul id="history-list" class="history-list"></ul>
+      </section>
+      <div class="main-content">
+        <h1>Tiny URL EmBiginator</h1>
+        <form id="resolve-form">
+          <label for="url-input">Short URL</label>
+          <input id="url-input" name="url" type="url" placeholder="https://bit.ly/xyz" required />
+          <button type="submit">Resolve</button>
+        </form>
+        <button id="history-toggle-button" type="button" class="history-toggle-button">History</button>
+        <p id="status" class="status" aria-live="polite"></p>
+        <section id="result" class="result" hidden>
+          <p><strong>Final URL:</strong> <a id="final-url" target="_blank" rel="noopener noreferrer"></a></p>
+          <p id="host-check" class="host-check"></p>
+          <button id="domain-health-button" type="button" class="health-button" disabled>Check Domain Health</button>
+          <section id="domain-health-panel" class="domain-health" hidden>
+            <p id="domain-health-summary" class="health-summary"></p>
+            <p id="domain-health-loading" class="health-loading" hidden>Checking domain health...</p>
+            <div id="domain-health-content" hidden>
+              <h2>crt.sh</h2>
+              <p><strong>Certificates:</strong> <span id="crt-count"></span></p>
+              <p><strong>First seen:</strong> <span id="crt-first-seen"></span></p>
+              <p><strong>Last seen:</strong> <span id="crt-last-seen"></span></p>
+              <p><strong>Common Names:</strong></p>
+              <ul id="crt-common-names" class="health-list"></ul>
+              <p id="crt-error" class="health-error" hidden></p>
+
+              <h2>RDAP</h2>
+              <p><strong>Registration:</strong> <span id="rdap-registration"></span></p>
+              <p><strong>Last changed:</strong> <span id="rdap-last-changed"></span></p>
+              <p><strong>Expiration:</strong> <span id="rdap-expiration"></span></p>
+              <p><strong>Registrar:</strong> <span id="rdap-registrar"></span></p>
+              <p><strong>Status:</strong> <span id="rdap-status"></span></p>
+              <p id="rdap-error" class="health-error" hidden></p>
+            </div>
+          </section>
+          <p><strong>Hops:</strong> <span id="hop-count"></span></p>
+          <ol id="chain"></ol>
+        </section>
+      </div>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

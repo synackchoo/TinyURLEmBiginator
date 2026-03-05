@@ -1,0 +1,8 @@
+{
+  "name": "tiny-url-embiginator",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}
