@@ -5,17 +5,19 @@ import {
   updateHistoryEntryDomainHealth,
   extractDisplayHost
 } from "../src/historyStore.js";
+import { buildDisplayChainItems } from "../src/resultFormatting.js";
+import { loadThemePreference, saveThemePreference, toggleThemePreference } from "../src/themePreference.js";
 
 const appEl = document.querySelector("#app");
 const mainContentEl = document.querySelector(".main-content");
 const form = document.querySelector("#resolve-form");
 const resolveButton = form.querySelector('button[type="submit"]');
 const input = document.querySelector("#url-input");
+const themeToggleButton = document.querySelector("#theme-toggle-button");
 const statusEl = document.querySelector("#status");
 const resultEl = document.querySelector("#result");
 const finalUrlEl = document.querySelector("#final-url");
 const hostCheckEl = document.querySelector("#host-check");
-const hopCountEl = document.querySelector("#hop-count");
 const chainEl = document.querySelector("#chain");
 
 const historyToggleButton = document.querySelector("#history-toggle-button");
@@ -31,7 +33,7 @@ const domainHealthContentEl = document.querySelector("#domain-health-content");
 const crtCountEl = document.querySelector("#crt-count");
 const crtFirstSeenEl = document.querySelector("#crt-first-seen");
 const crtLastSeenEl = document.querySelector("#crt-last-seen");
-const crtCommonNamesEl = document.querySelector("#crt-common-names");
+const crtDistinctNameCountEl = document.querySelector("#crt-distinct-name-count");
 const crtErrorEl = document.querySelector("#crt-error");
 const rdapRegistrationEl = document.querySelector("#rdap-registration");
 const rdapLastChangedEl = document.querySelector("#rdap-last-changed");
@@ -52,6 +54,39 @@ let panelExpanded = false;
 let historyPanelExpanded = false;
 let historyEntries = [];
 let selectedHistoryEntryId = null;
+let themePreference = "light";
+
+function applyThemePreference(nextPreference) {
+  themePreference = nextPreference;
+  document.documentElement.dataset.theme = nextPreference;
+  const nextLabel = nextPreference === "dark" ? "Switch to light mode" : "Switch to dark mode";
+  themeToggleButton.setAttribute("aria-label", nextLabel);
+  themeToggleButton.setAttribute("title", nextLabel);
+}
+
+async function initializeThemePreference() {
+  try {
+    const storedThemePreference = await loadThemePreference();
+    applyThemePreference(storedThemePreference);
+  } catch (error) {
+    applyThemePreference("light");
+    const message = error instanceof Error ? error.message : "Unknown theme preference error";
+    setStatus(`Theme preference unavailable: ${message}`, true);
+  }
+
+  themeToggleButton.addEventListener("click", async () => {
+    try {
+      const savedPreference = await saveThemePreference(toggleThemePreference(themePreference));
+      applyThemePreference(savedPreference);
+      if (statusEl.textContent.startsWith("Theme preference unavailable:")) {
+        setStatus("");
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown theme preference error";
+      setStatus(`Theme preference unavailable: ${message}`, true);
+    }
+  });
+}
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -108,7 +143,7 @@ function resetHealthDisplay() {
   crtCountEl.textContent = UNKNOWN;
   crtFirstSeenEl.textContent = UNKNOWN;
   crtLastSeenEl.textContent = UNKNOWN;
-  resetList(crtCommonNamesEl, [], "No common names found.");
+  crtDistinctNameCountEl.textContent = UNKNOWN;
   crtErrorEl.hidden = true;
   crtErrorEl.textContent = "";
 
@@ -176,18 +211,10 @@ function renderResult(result) {
     hostCheckEl.classList.remove("warn");
   }
 
-  hopCountEl.textContent = String(result.hops);
-
   chainEl.innerHTML = "";
-  for (const step of result.chain) {
+  for (const chainText of buildDisplayChainItems(result)) {
     const item = document.createElement("li");
-    if (step.nextUrl) {
-      item.textContent = `${step.status} ${step.url} -> ${step.nextUrl}`;
-    } else if (step.finalUrl) {
-      item.textContent = `${step.status} ${step.url} -> ${step.finalUrl}`;
-    } else {
-      item.textContent = `${step.status} ${step.url}`;
-    }
+    item.textContent = chainText;
     chainEl.append(item);
   }
 
@@ -199,8 +226,11 @@ function renderHealthData(healthResult, fromCache = false) {
   const crtSh = healthResult?.crtSh ?? {};
   const rdap = healthResult?.rdap ?? {};
   const sourceText = fromCache ? "cached snapshot" : "live lookup";
+  const riskLevel = healthResult?.risk?.level ?? "Unknown";
+  const riskReasons = Array.isArray(healthResult?.risk?.reasons) ? healthResult.risk.reasons.slice(0, 2) : [];
+  const riskText = riskReasons.length > 0 ? `Risk: ${riskLevel} (${riskReasons.join(" ")})` : `Risk: ${riskLevel}`;
 
-  domainHealthSummaryEl.textContent = `Domain: ${healthResult.domain} | Checked: ${formatTimestamp(
+  domainHealthSummaryEl.textContent = `${riskText} | Domain: ${healthResult.domain} | Checked: ${formatTimestamp(
     healthResult.checkedAt
   )} | Source: ${sourceText}`;
   domainHealthLoadingEl.hidden = true;
@@ -209,7 +239,7 @@ function renderHealthData(healthResult, fromCache = false) {
   crtCountEl.textContent = String(crtSh.certificateCount ?? 0);
   crtFirstSeenEl.textContent = formatTimestamp(crtSh.firstSeen);
   crtLastSeenEl.textContent = formatTimestamp(crtSh.lastSeen);
-  resetList(crtCommonNamesEl, crtSh.commonNames, "No common names found.");
+  crtDistinctNameCountEl.textContent = String(crtSh.distinctNameCount ?? 0);
   if (crtSh.error) {
     crtErrorEl.hidden = false;
     crtErrorEl.textContent = `crt.sh error: ${crtSh.error}`;
@@ -383,6 +413,7 @@ domainHealthButton.addEventListener("click", async () => {
 });
 
 async function initialize() {
+  await initializeThemePreference();
   resetHealthForResolvedDomain(null);
   setHistoryPanelExpanded(false);
   await refreshHistoryFromStorage();

@@ -11,7 +11,9 @@ Chrome extension MVP that resolves shortened URLs to their final destination wit
 - Flags when destination domain differs from the short-link domain.
 - Extracts external destination URLs from LinkedIn `lnkd.in` interstitial warning pages.
 - Adds a collapsible `Check Domain Health` panel with `crt.sh` certificate history and `rdap.org` registration data.
+- Summarizes domain health as `Low`, `Medium`, or `High` risk based on registration age and certificate history.
 - Stores resolved URLs in a history panel so past entries can be reloaded and their domain-health snapshots revisited.
+- Includes a popup theme toggle button that switches between `Light` and `Dark` modes.
 
 ## Limitations
 
@@ -25,9 +27,16 @@ Chrome extension MVP that resolves shortened URLs to their final destination wit
 npm test
 ```
 
-## Load in Chrome
+## Load unpacked in a browser
 
-1. Open `chrome://extensions`.
+Use a Chromium-based browser for testing this extension unpacked, such as Chrome, Edge, or Brave.
+
+1. Open your browser's extensions page:
+   - Chrome: `chrome://extensions`
+   - Edge: `edge://extensions`
+   - Brave: `brave://extensions`
 2. Enable **Developer mode**.
 3. Click **Load unpacked**.
-4. Select this folder.
+4. Select this folder: `/home/bryce/projects/short-link-unmasker`
+
+If the browser reports an error while loading, open the extension details page and inspect the service worker for `src/background.js`.

@@ -2,6 +2,7 @@ const EMPTY_CRTSH_SUMMARY = {
   certificateCount: 0,
   firstSeen: null,
   lastSeen: null,
+  distinctNameCount: 0,
   commonNames: [],
   error: null
 };
@@ -14,6 +15,28 @@ const EMPTY_RDAP_SUMMARY = {
   registrar: null,
   error: null
 };
+
+function parseTimestamp(value) {
+  if (typeof value !== "string" || value.trim() === "") {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.valueOf()) ? null : parsed;
+}
+
+function ageInDays(from, to) {
+  if (!(from instanceof Date) || !(to instanceof Date)) {
+    return null;
+  }
+
+  const diff = to.valueOf() - from.valueOf();
+  if (diff < 0) {
+    return 0;
+  }
+
+  return Math.floor(diff / 86400000);
+}
 
 function normalizeDomain(input) {
   if (typeof input !== "string" || input.trim() === "") {
@@ -88,6 +111,7 @@ export function summarizeCrtShCertificates(entries) {
     certificateCount: entries.length,
     firstSeen: timestamps.length > 0 ? timestamps[0] : null,
     lastSeen: timestamps.length > 0 ? timestamps[timestamps.length - 1] : null,
+    distinctNameCount: commonNameSet.size,
     commonNames: [...commonNameSet].sort(),
     error: null
   };
@@ -183,6 +207,84 @@ function errorMessage(error, fallback) {
   return error instanceof Error ? error.message : fallback;
 }
 
+function hasCrtShData(summary) {
+  return Boolean(
+    (Number.isFinite(summary?.certificateCount) && summary.certificateCount > 0) ||
+      (Number.isFinite(summary?.distinctNameCount) && summary.distinctNameCount > 0) ||
+      summary?.firstSeen ||
+      summary?.lastSeen
+  );
+}
+
+function hasRdapData(summary) {
+  return Boolean(
+    summary?.registrationDate ||
+      summary?.lastChangedDate ||
+      summary?.expirationDate ||
+      (Array.isArray(summary?.status) && summary.status.length > 0) ||
+      summary?.registrar
+  );
+}
+
+export function assessDomainRisk(healthResult, options = {}) {
+  const now = parseTimestamp(options.now) ?? new Date();
+  const crtSh = healthResult?.crtSh ?? EMPTY_CRTSH_SUMMARY;
+  const rdap = healthResult?.rdap ?? EMPTY_RDAP_SUMMARY;
+  const reasons = [];
+  let score = 0;
+
+  const registrationDate = parseTimestamp(rdap.registrationDate);
+  const firstSeenDate = parseTimestamp(crtSh.firstSeen);
+  const domainAgeDays = ageInDays(registrationDate, now);
+  const certificateAgeDays = ageInDays(firstSeenDate, now);
+  const certificateCount = Number.isFinite(crtSh.certificateCount) ? crtSh.certificateCount : 0;
+  const hasLookupData = hasCrtShData(crtSh) || hasRdapData(rdap);
+
+  if (!hasLookupData) {
+    return {
+      level: "Unknown",
+      score: null,
+      reasons: ["No lookup data returned from crt.sh or RDAP."]
+    };
+  }
+
+  if (rdap.error || crtSh.error) {
+    score += 2;
+    reasons.push("Lookup data is incomplete.");
+  }
+
+  if (domainAgeDays !== null && domainAgeDays < 30) {
+    score += 2;
+    reasons.push("Domain registration is less than 30 days old.");
+  } else if (domainAgeDays !== null && domainAgeDays < 365) {
+    score += 1;
+    reasons.push("Domain registration is less than one year old.");
+  } else if (domainAgeDays !== null) {
+    reasons.push("Domain registration is older than one year.");
+  } else {
+    score += 1;
+    reasons.push("Registration age is unknown.");
+  }
+
+  if (certificateCount <= 1) {
+    score += 1;
+    reasons.push("Certificate history is very limited.");
+  } else if (certificateAgeDays !== null && certificateAgeDays < 30) {
+    score += 1;
+    reasons.push("Certificate history is less than 30 days old.");
+  } else if (certificateCount >= 3 && certificateAgeDays !== null && certificateAgeDays >= 180) {
+    reasons.push("Certificate history appears established.");
+  }
+
+  const level = score >= 3 ? "High" : score >= 1 ? "Medium" : "Low";
+
+  return {
+    level,
+    score,
+    reasons
+  };
+}
+
 export async function getDomainHealth(domainInput, options = {}) {
   const fetchImpl = options.fetchImpl ?? fetch;
   if (typeof fetchImpl !== "function") {
@@ -206,10 +308,21 @@ export async function getDomainHealth(domainInput, options = {}) {
       ? rdapResult.value
       : { ...EMPTY_RDAP_SUMMARY, error: errorMessage(rdapResult.reason, "RDAP request failed") };
 
+  const checkedAt = new Date().toISOString();
+  const risk = assessDomainRisk(
+    {
+      domain,
+      crtSh,
+      rdap
+    },
+    { now: checkedAt }
+  );
+
   return {
     domain,
     crtSh,
     rdap,
-    checkedAt: new Date().toISOString()
+    risk,
+    checkedAt
   };
 }
