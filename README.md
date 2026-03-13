@@ -37,6 +37,6 @@ Use a Chromium-based browser for testing this extension unpacked, such as Chrome
    - Brave: `brave://extensions`
 2. Enable **Developer mode**.
 3. Click **Load unpacked**.
-4. Select this folder: `/home/bryce/projects/short-link-unmasker`
+4. Select this folder: `/home/bryce/projects/TinyURLEmBiginator`
 
 If the browser reports an error while loading, open the extension details page and inspect the service worker for `src/background.js`.
