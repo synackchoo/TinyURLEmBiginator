@@ -1,6 +1,6 @@
 # Tiny URL EmBiginator
 
-Chrome extension MVP that resolves shortened URLs to their final destination without opening the URL in a tab.
+Chrome extension tool that resolves shortened URLs to their final destination without opening the URL in a tab.
 
 ## Features
 
