@@ -1,8 +1,7 @@
 {
   "name": "tiny-url-embiginator",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "scripts": {
-    "test": "node --test"
-  }
+  "description": "Reveal where shortened URLs really lead without opening them in a tab."
 }

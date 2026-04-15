@@ -1,4 +1,4 @@
-export const THEME_PREFERENCE_STORAGE_KEY = "popupThemePreference";
+const THEME_PREFERENCE_STORAGE_KEY = "popupThemePreference";
 
 const VALID_THEME_PREFERENCES = new Set(["light", "dark"]);
 

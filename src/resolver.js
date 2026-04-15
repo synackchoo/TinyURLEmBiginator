@@ -73,23 +73,44 @@ function extractFirstExternalLinkFromLinkedInHtml(html, currentUrl) {
   return null;
 }
 
-async function maybeExtractLinkedInInterstitialTarget(currentUrl, fetchImpl, timeoutMs) {
-  let parsedCurrentUrl;
+function extractLinkedInQueryParamTarget(parsedUrl) {
+  for (const key of ["url", "redirectUrl", "targetUrl"]) {
+    const candidate = parsedUrl.searchParams.get(key);
+    if (!candidate) continue;
+    try {
+      const decoded = new URL(candidate);
+      if (!["http:", "https:"].includes(decoded.protocol)) continue;
+      if (decoded.toString() === parsedUrl.toString()) continue;
+      return decoded.toString();
+    } catch (_error) {
+      continue;
+    }
+  }
+  return null;
+}
+
+async function maybeExtractLinkedInInterstitialTarget(linkedInUrl, fetchImpl, timeoutMs) {
+  let parsedUrl;
   try {
-    parsedCurrentUrl = new URL(currentUrl);
+    parsedUrl = new URL(linkedInUrl);
   } catch (_error) {
     return null;
   }
 
-  if (!isLinkedInHost(parsedCurrentUrl.hostname)) {
+  if (!isLinkedInHost(parsedUrl.hostname)) {
     return null;
+  }
+
+  const queryTarget = extractLinkedInQueryParamTarget(parsedUrl);
+  if (queryTarget) {
+    return queryTarget;
   }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetchImpl(currentUrl, {
+    const response = await fetchImpl(linkedInUrl, {
       method: "GET",
       redirect: "follow",
       cache: "no-store",
@@ -101,7 +122,7 @@ async function maybeExtractLinkedInInterstitialTarget(currentUrl, fetchImpl, tim
     }
 
     const html = await response.text();
-    return extractFirstExternalLinkFromLinkedInHtml(html, currentUrl);
+    return extractFirstExternalLinkFromLinkedInHtml(html, linkedInUrl);
   } catch (_error) {
     return null;
   } finally {
@@ -170,13 +191,26 @@ export async function resolveUrl(inputUrl, options = {}) {
     }
 
     if (!REDIRECT_STATUS_CODES.has(step.status)) {
-      let finalUrl = step.responseUrl || currentUrl;
-      if (finalUrl === currentUrl) {
-        const interstitialTarget = await maybeExtractLinkedInInterstitialTarget(currentUrl, fetchImpl, timeoutMs);
-        if (interstitialTarget) {
-          finalUrl = interstitialTarget;
+      const landedUrl = step.responseUrl || currentUrl;
+      const interstitialTarget = await maybeExtractLinkedInInterstitialTarget(landedUrl, fetchImpl, timeoutMs);
+
+      if (interstitialTarget && interstitialTarget !== landedUrl && !visitedUrls.has(interstitialTarget)) {
+        chain.push({
+          method: step.method,
+          status: step.status,
+          url: currentUrl,
+          nextUrl: interstitialTarget
+        });
+        hops += 1;
+        if (hops > maxHops) {
+          throw new Error(`Exceeded maximum redirects (${maxHops})`);
         }
+        visitedUrls.add(interstitialTarget);
+        currentUrl = interstitialTarget;
+        continue;
       }
+
+      const finalUrl = landedUrl;
       chain.push({
         method: step.method,
         status: step.status,

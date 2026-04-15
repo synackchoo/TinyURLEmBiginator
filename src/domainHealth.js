@@ -3,7 +3,6 @@ const EMPTY_CRTSH_SUMMARY = {
   firstSeen: null,
   lastSeen: null,
   distinctNameCount: 0,
-  commonNames: [],
   error: null
 };
 
@@ -72,47 +71,40 @@ function parseIsoTimestamp(value) {
   return parsed.toISOString();
 }
 
-function extractCommonNames(entry) {
-  const names = [];
-  if (typeof entry?.common_name === "string") {
-    names.push(entry.common_name);
+function countDistinctNames(entries) {
+  const names = new Set();
+  for (const entry of entries) {
+    if (typeof entry?.common_name === "string") {
+      const trimmed = entry.common_name.trim().toLowerCase();
+      if (trimmed) names.add(trimmed);
+    }
+    if (typeof entry?.name_value === "string") {
+      for (const raw of entry.name_value.split("\n")) {
+        const trimmed = raw.trim().toLowerCase();
+        if (trimmed) names.add(trimmed);
+      }
+    }
   }
-  if (typeof entry?.name_value === "string") {
-    names.push(...entry.name_value.split("\n"));
-  }
-
-  return names
-    .map((item) => item.trim().toLowerCase())
-    .filter((item) => item.length > 0);
+  return names.size;
 }
 
-export function summarizeCrtShCertificates(entries) {
+function summarizeCrtShCertificates(entries) {
   if (!Array.isArray(entries) || entries.length === 0) {
     return { ...EMPTY_CRTSH_SUMMARY };
   }
 
   const timestamps = [];
-  const commonNameSet = new Set();
-
   for (const entry of entries) {
     const ts = parseIsoTimestamp(entry?.entry_timestamp);
-    if (ts) {
-      timestamps.push(ts);
-    }
-
-    for (const name of extractCommonNames(entry)) {
-      commonNameSet.add(name);
-    }
+    if (ts) timestamps.push(ts);
   }
-
   timestamps.sort();
 
   return {
     certificateCount: entries.length,
     firstSeen: timestamps.length > 0 ? timestamps[0] : null,
     lastSeen: timestamps.length > 0 ? timestamps[timestamps.length - 1] : null,
-    distinctNameCount: commonNameSet.size,
-    commonNames: [...commonNameSet].sort(),
+    distinctNameCount: countDistinctNames(entries),
     error: null
   };
 }
@@ -164,7 +156,7 @@ function extractRegistrar(record) {
   return null;
 }
 
-export function summarizeRdapRecord(record) {
+function summarizeRdapRecord(record) {
   return {
     registrationDate: findEventDate(record, ["registration", "registered"]),
     lastChangedDate: findEventDate(record, ["last changed", "last update of rdap database"]),
@@ -226,7 +218,7 @@ function hasRdapData(summary) {
   );
 }
 
-export function assessDomainRisk(healthResult, options = {}) {
+function assessDomainRisk(healthResult, options = {}) {
   const now = parseTimestamp(options.now) ?? new Date();
   const crtSh = healthResult?.crtSh ?? EMPTY_CRTSH_SUMMARY;
   const rdap = healthResult?.rdap ?? EMPTY_RDAP_SUMMARY;

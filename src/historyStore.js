@@ -1,5 +1,5 @@
-export const HISTORY_STORAGE_KEY = "resolvedUrlHistory";
-export const MAX_HISTORY_ENTRIES = 50;
+const HISTORY_STORAGE_KEY = "resolvedUrlHistory";
+const MAX_HISTORY_ENTRIES = 50;
 
 function isNonEmptyString(value) {
   return typeof value === "string" && value.trim() !== "";
@@ -38,7 +38,7 @@ function cloneEntry(entry) {
   };
 }
 
-export function sanitizeHistoryEntries(entries, maxEntries = MAX_HISTORY_ENTRIES) {
+function sanitizeHistoryEntries(entries, maxEntries = MAX_HISTORY_ENTRIES) {
   if (!Array.isArray(entries)) {
     return [];
   }

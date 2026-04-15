@@ -8,74 +8,171 @@
   </head>
   <body>
     <main id="app" class="app">
-      <div class="history-shell">
-        <section id="history-panel" class="history-panel">
-          <p id="history-empty" class="history-empty">No resolved URLs yet.</p>
-          <ul id="history-list" class="history-list"></ul>
-        </section>
-      </div>
-      <div class="main-shell">
-        <div class="main-content">
-          <div class="toolbar">
-            <h1>Tiny URL EmBiginator</h1>
-            <button
-              id="theme-toggle-button"
-              class="theme-toggle-button"
-              type="button"
-              aria-label="Switch to dark mode"
-              title="Switch to dark mode"
-            >
-              <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="12" cy="12" r="4.25" />
-                <line x1="12" y1="1.75" x2="12" y2="4.5" />
-                <line x1="12" y1="19.5" x2="12" y2="22.25" />
-                <line x1="1.75" y1="12" x2="4.5" y2="12" />
-                <line x1="19.5" y1="12" x2="22.25" y2="12" />
-                <line x1="4.4" y1="4.4" x2="6.45" y2="6.45" />
-                <line x1="17.55" y1="17.55" x2="19.6" y2="19.6" />
-                <line x1="4.4" y1="19.6" x2="6.45" y2="17.55" />
-                <line x1="17.55" y1="6.45" x2="19.6" y2="4.4" />
-              </svg>
-              <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M15.2 2.4a8.8 8.8 0 1 0 6.4 14.8A9.6 9.6 0 0 1 15.2 2.4Z" />
-              </svg>
-            </button>
-          </div>
-          <form id="resolve-form">
-            <label for="url-input">Short URL</label>
-            <input id="url-input" name="url" type="url" placeholder="https://bit.ly/xyz" required />
-            <button type="submit">Resolve</button>
-          </form>
-          <button id="history-toggle-button" type="button" class="history-toggle-button">History</button>
-          <p id="status" class="status" aria-live="polite"></p>
-          <section id="result" class="result" hidden>
-            <p><strong>Final URL:</strong> <a id="final-url" target="_blank" rel="noopener noreferrer"></a></p>
-            <p id="host-check" class="host-check"></p>
-            <button id="domain-health-button" type="button" class="health-button" disabled>Check Domain Health</button>
-          <section id="domain-health-panel" class="domain-health" hidden>
-              <p id="domain-health-summary" class="health-summary"></p>
-              <p id="domain-health-loading" class="health-loading" hidden>Checking domain health...</p>
-              <div id="domain-health-content" hidden>
-                <h2>crt.sh</h2>
-                <p><strong>Certificates:</strong> <span id="crt-count"></span></p>
-                <p><strong>First seen:</strong> <span id="crt-first-seen"></span></p>
-                <p><strong>Last seen:</strong> <span id="crt-last-seen"></span></p>
-                <p><strong>Distinct names:</strong> <span id="crt-distinct-name-count"></span></p>
-                <p id="crt-error" class="health-error" hidden></p>
-
-                <h2>RDAP</h2>
-                <p><strong>Registration:</strong> <span id="rdap-registration"></span></p>
-                <p><strong>Last changed:</strong> <span id="rdap-last-changed"></span></p>
-                <p><strong>Expiration:</strong> <span id="rdap-expiration"></span></p>
-                <p><strong>Registrar:</strong> <span id="rdap-registrar"></span></p>
-                <p><strong>Status:</strong> <span id="rdap-status"></span></p>
-                <p id="rdap-error" class="health-error" hidden></p>
-              </div>
-            </section>
-            <ol id="chain"></ol>
-          </section>
+      <header class="toolbar">
+        <h1 class="wordmark">Tiny URL EmBiginator</h1>
+        <div class="toolbar-actions">
+          <button
+            id="history-toggle-button"
+            type="button"
+            class="icon-button"
+            aria-label="Show history"
+            title="Show history"
+            aria-expanded="false"
+            aria-controls="history-panel"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5a7 7 0 1 0 6.93 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+              <path d="M12 5V2.5L8.5 5 12 7.5V5z" fill="currentColor" />
+              <path d="M12 8v4.5l3 1.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+          <button
+            id="theme-toggle-button"
+            type="button"
+            class="icon-button"
+            aria-label="Switch to dark mode"
+            title="Switch to dark mode"
+          >
+            <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="4.25" fill="none" stroke="currentColor" stroke-width="1.8" />
+              <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                <line x1="12" y1="2.5" x2="12" y2="4.75" />
+                <line x1="12" y1="19.25" x2="12" y2="21.5" />
+                <line x1="2.5" y1="12" x2="4.75" y2="12" />
+                <line x1="19.25" y1="12" x2="21.5" y2="12" />
+                <line x1="5.2" y1="5.2" x2="6.8" y2="6.8" />
+                <line x1="17.2" y1="17.2" x2="18.8" y2="18.8" />
+                <line x1="5.2" y1="18.8" x2="6.8" y2="17.2" />
+                <line x1="17.2" y1="6.8" x2="18.8" y2="5.2" />
+              </g>
+            </svg>
+            <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15.5 3a8.5 8.5 0 1 0 5.5 14.9A9 9 0 0 1 15.5 3z" fill="currentColor" />
+            </svg>
+          </button>
         </div>
-      </div>
+      </header>
+
+      <section
+        id="history-panel"
+        class="history-panel"
+        aria-hidden="true"
+        aria-label="Resolved URL history"
+      >
+        <p id="history-empty" class="history-empty">No resolved URLs yet.</p>
+        <ul id="history-list" class="history-list"></ul>
+      </section>
+
+      <form id="resolve-form" class="resolve-form" autocomplete="off">
+        <label for="url-input" class="visually-hidden">Short URL</label>
+        <div class="resolve-row">
+          <input
+            id="url-input"
+            name="url"
+            type="url"
+            placeholder="Paste a shortened URL…"
+            required
+          />
+          <button id="resolve-button" type="submit" class="primary-button">Resolve</button>
+        </div>
+      </form>
+
+      <p id="status" class="status" aria-live="polite"></p>
+
+      <section id="result" class="result" hidden>
+        <article id="result-card" class="result-card">
+          <header class="result-card-header">
+            <span id="result-icon" class="result-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6" />
+                <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" fill="none" stroke="currentColor" stroke-width="1.6" />
+              </svg>
+            </span>
+            <span id="host-changed-chip" class="chip chip-warn" hidden>host changed</span>
+          </header>
+          <div class="result-body">
+            <h2 id="final-host" class="final-host">—</h2>
+            <div class="final-url-row">
+              <a
+                id="final-url"
+                class="final-url"
+                target="_blank"
+                rel="noopener noreferrer"
+                title=""
+              ></a>
+              <button id="copy-button" type="button" class="icon-button copy-button" aria-label="Copy final URL" title="Copy final URL">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="8" y="8" width="11" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.6" />
+                  <path d="M5 16V6a2 2 0 0 1 2-2h9" fill="none" stroke="currentColor" stroke-width="1.6" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <button
+            id="hop-trail-toggle"
+            type="button"
+            class="hop-trail-toggle"
+            hidden
+            aria-expanded="false"
+            aria-controls="hop-trail"
+          >
+            <span id="hop-trail-toggle-label">↳ 0 hops · show trail</span>
+          </button>
+          <ol id="hop-trail" class="hop-trail" hidden></ol>
+        </article>
+
+        <button id="domain-health-button" type="button" class="health-button" disabled>
+          Check Domain Health
+        </button>
+
+        <article id="health-card" class="health-card" hidden>
+          <div id="health-loading" class="health-loading" hidden>
+            <span class="skeleton-pill"></span>
+            <span class="health-loading-text">Checking certificates and registration…</span>
+          </div>
+          <div id="health-content" hidden>
+            <header class="health-header">
+              <span id="risk-badge" class="risk-badge">—</span>
+              <p id="risk-reason" class="risk-reason"></p>
+            </header>
+            <button
+              id="health-details-toggle"
+              type="button"
+              class="health-details-toggle"
+              aria-expanded="false"
+              aria-controls="health-details"
+            >
+              Show certificate &amp; registration details
+            </button>
+            <div id="health-details" class="health-details" hidden>
+              <section class="health-section">
+                <h3 class="health-section-label">Certificates</h3>
+                <dl class="health-grid">
+                  <dt>Total</dt><dd id="crt-count">—</dd>
+                  <dt>First seen</dt><dd id="crt-first-seen">—</dd>
+                  <dt>Last seen</dt><dd id="crt-last-seen">—</dd>
+                  <dt>Distinct names</dt><dd id="crt-distinct-name-count">—</dd>
+                </dl>
+                <p id="crt-error" class="health-error" hidden></p>
+              </section>
+              <section class="health-section">
+                <h3 class="health-section-label">Registration</h3>
+                <dl class="health-grid">
+                  <dt>Registered</dt><dd id="rdap-registration">—</dd>
+                  <dt>Last changed</dt><dd id="rdap-last-changed">—</dd>
+                  <dt>Expires</dt><dd id="rdap-expiration">—</dd>
+                  <dt>Registrar</dt><dd id="rdap-registrar">—</dd>
+                  <dt>Status</dt><dd id="rdap-status">—</dd>
+                </dl>
+                <p id="rdap-error" class="health-error" hidden></p>
+              </section>
+              <p id="health-meta" class="health-meta"></p>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <div id="toast" class="toast" hidden>Copied</div>
     </main>
     <script type="module" src="popup.js"></script>
   </body>
