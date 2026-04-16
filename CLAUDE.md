@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Tiny URL EmBiginator is a Manifest V3 Chrome extension that resolves shortened URLs to their final destination by walking HTTP redirect chains in a background service worker — without ever opening the URL in a tab. It also exposes a "Domain Health" panel that queries `crt.sh` and `rdap.org` for certificate history and registration data.
+RedirectCheck is a Manifest V3 Chrome extension that resolves shortened URLs to their final destination by walking HTTP redirect chains in a background service worker — without ever opening the URL in a tab. It also exposes a "Domain Health" panel that queries `crt.sh` and `rdap.org` for certificate history and registration data.
 
 ## Build / test / run
 

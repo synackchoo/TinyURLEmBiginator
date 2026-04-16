@@ -34,7 +34,8 @@ function cloneEntry(entry) {
   return {
     ...entry,
     result: entry?.result ? { ...entry.result, chain: Array.isArray(entry.result.chain) ? [...entry.result.chain] : [] } : {},
-    domainHealth: entry?.domainHealth ? structuredClone(entry.domainHealth) : null
+    domainHealth: entry?.domainHealth ? structuredClone(entry.domainHealth) : null,
+    safeBrowsing: entry?.safeBrowsing ? structuredClone(entry.safeBrowsing) : null
   };
 }
 
@@ -79,6 +80,23 @@ export function updateHistoryEntryDomainHealth(entries, entryId, domainHealth) {
     return {
       ...entry,
       domainHealth: domainHealth ? structuredClone(domainHealth) : null
+    };
+  });
+}
+
+export function updateHistoryEntrySafeBrowsing(entries, entryId, safeBrowsing) {
+  const normalizedEntries = sanitizeHistoryEntries(entries);
+  if (!isNonEmptyString(entryId)) {
+    return normalizedEntries;
+  }
+
+  return normalizedEntries.map((entry) => {
+    if (entry.id !== entryId) {
+      return entry;
+    }
+    return {
+      ...entry,
+      safeBrowsing: safeBrowsing ? structuredClone(safeBrowsing) : null
     };
   });
 }

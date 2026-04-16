@@ -1,7 +1,9 @@
 import { resolveUrl } from "./resolver.js";
 import { getDomainHealth } from "./domainHealth.js";
+import { checkSafeBrowsing, loadApiKey } from "./safeBrowsing.js";
+import { loadSettings } from "./settingsStore.js";
 
-const CONTEXT_MENU_ID = "tiny-url-embiginator-resolve-link";
+const CONTEXT_MENU_ID = "redirect-check-resolve-link";
 const PENDING_RESOLVE_KEY = "pendingResolveUrl";
 
 function respondWith(promise, sendResponse) {
@@ -21,12 +23,28 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.type === "resolve-url") {
-    respondWith(resolveUrl(message.url), sendResponse);
+    respondWith(
+      loadSettings().then((settings) =>
+        resolveUrl(message.url, {
+          maxHops: settings.maxHops,
+          timeoutMs: settings.timeoutMs
+        })
+      ),
+      sendResponse
+    );
     return true;
   }
 
   if (message.type === "check-domain-health") {
     respondWith(getDomainHealth(message.domain), sendResponse);
+    return true;
+  }
+
+  if (message.type === "check-safe-browsing") {
+    respondWith(
+      loadApiKey().then((apiKey) => checkSafeBrowsing(message.urls, apiKey)),
+      sendResponse
+    );
     return true;
   }
 
@@ -37,7 +55,7 @@ function registerContextMenu() {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
       id: CONTEXT_MENU_ID,
-      title: "Resolve with Tiny URL EmBiginator",
+      title: "Resolve with RedirectCheck",
       contexts: ["link"]
     });
   });

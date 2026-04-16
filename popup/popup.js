@@ -3,9 +3,12 @@ import {
   saveHistoryEntries,
   prependResolvedEntry,
   updateHistoryEntryDomainHealth,
+  updateHistoryEntrySafeBrowsing,
   extractDisplayHost
 } from "../src/historyStore.js";
 import { loadThemePreference, saveThemePreference, toggleThemePreference } from "../src/themePreference.js";
+import { loadApiKey, saveApiKey } from "../src/safeBrowsing.js";
+import { loadSettings, saveSettings, getDefaults } from "../src/settingsStore.js";
 
 /* ─── DOM ─────────────────────────────────────────── */
 
@@ -16,6 +19,17 @@ const resolveButton = document.querySelector("#resolve-button");
 const statusEl = document.querySelector("#status");
 
 const themeToggleButton = document.querySelector("#theme-toggle-button");
+const settingsToggleButton = document.querySelector("#settings-toggle-button");
+const settingsPanel = document.querySelector("#settings-panel");
+const apiKeyInput = document.querySelector("#api-key-input");
+const apiKeySaveButton = document.querySelector("#api-key-save");
+const apiKeyStatusEl = document.querySelector("#api-key-status");
+const maxHopsInput = document.querySelector("#settings-max-hops");
+const timeoutInput = document.querySelector("#settings-timeout");
+const maxHistoryInput = document.querySelector("#settings-max-history");
+const limitsSaveButton = document.querySelector("#settings-limits-save");
+const limitsResetButton = document.querySelector("#settings-limits-reset");
+const limitsStatusEl = document.querySelector("#settings-limits-status");
 const historyToggleButton = document.querySelector("#history-toggle-button");
 const historyPanel = document.querySelector("#history-panel");
 const historyEmptyEl = document.querySelector("#history-empty");
@@ -25,6 +39,7 @@ const resultEl = document.querySelector("#result");
 const resultCardEl = document.querySelector("#result-card");
 const resultIconEl = document.querySelector("#result-icon");
 const hostChangedChip = document.querySelector("#host-changed-chip");
+const safeBrowsingChip = document.querySelector("#safe-browsing-chip");
 const finalHostEl = document.querySelector("#final-host");
 const finalUrlEl = document.querySelector("#final-url");
 const copyButton = document.querySelector("#copy-button");
@@ -56,6 +71,7 @@ const rdapStatusEl = document.querySelector("#rdap-status");
 const rdapErrorEl = document.querySelector("#rdap-error");
 
 const toastEl = document.querySelector("#toast");
+const historyRowIconTemplate = document.querySelector("#history-row-icon-template");
 
 const DASH = "—";
 const PENDING_RESOLVE_KEY = "pendingResolveUrl";
@@ -68,6 +84,9 @@ let historyEntries = [];
 let selectedHistoryEntryId = null;
 let currentResolvedDomain = null;
 let activeHealthRequestId = 0;
+let activeSafeBrowsingRequestId = 0;
+let cachedApiKey = null;
+let currentSettings = getDefaults();
 let toastTimer = null;
 
 /* ─── Status & toast ─────────────────────────────── */
@@ -116,24 +135,180 @@ async function initTheme() {
   });
 }
 
-/* ─── History drawer ─────────────────────────────── */
+/* ─── Toggle panel helper ───────────────────────── */
 
-function setHistoryOpen(open) {
-  appEl.classList.toggle("history-open", open);
-  historyPanel.setAttribute("aria-hidden", open ? "false" : "true");
-  historyToggleButton.setAttribute("aria-expanded", open ? "true" : "false");
-  const label = open ? "Hide history" : "Show history";
-  historyToggleButton.setAttribute("aria-label", label);
-  historyToggleButton.setAttribute("title", label);
+function createPanelToggle(className, panel, toggleButton, openLabel, closedLabel) {
+  function set(open) {
+    appEl.classList.toggle(className, open);
+    panel.setAttribute("aria-hidden", open ? "false" : "true");
+    toggleButton.setAttribute("aria-expanded", open ? "true" : "false");
+    const label = open ? openLabel : closedLabel;
+    toggleButton.setAttribute("aria-label", label);
+    toggleButton.setAttribute("title", label);
+  }
+  toggleButton.addEventListener("click", () => {
+    set(!appEl.classList.contains(className));
+  });
+  return set;
 }
 
+/* ─── Settings panel ────────────────────────────── */
+
+const setSettingsOpen = createPanelToggle(
+  "settings-open", settingsPanel, settingsToggleButton,
+  "Hide settings", "Show settings"
+);
+
+apiKeyInput.addEventListener("focus", () => {
+  if (apiKeyInput.value === "••••••••••••••••") {
+    apiKeyInput.value = "";
+  }
+});
+
+apiKeySaveButton.addEventListener("click", async () => {
+  const raw = apiKeyInput.value.trim();
+  const isMasked = raw === "••••••••••••••••";
+  if (isMasked) return;
+  try {
+    cachedApiKey = await saveApiKey(raw || null);
+    apiKeyInput.value = cachedApiKey ? "••••••••••••••••" : "";
+    apiKeyStatusEl.textContent = cachedApiKey ? "Key saved." : "Key removed.";
+    apiKeyStatusEl.className = "settings-status saved";
+  } catch (error) {
+    apiKeyStatusEl.textContent = `Save failed: ${errorText(error)}`;
+    apiKeyStatusEl.className = "settings-status error";
+  }
+});
+
+function populateLimitsInputs(settings) {
+  maxHopsInput.value = settings.maxHops;
+  timeoutInput.value = settings.timeoutMs;
+  maxHistoryInput.value = settings.maxHistoryEntries;
+}
+
+limitsSaveButton.addEventListener("click", async () => {
+  try {
+    currentSettings = await saveSettings({
+      maxHops: Number(maxHopsInput.value),
+      timeoutMs: Number(timeoutInput.value),
+      maxHistoryEntries: Number(maxHistoryInput.value)
+    });
+    populateLimitsInputs(currentSettings);
+    limitsStatusEl.textContent = "Settings saved.";
+    limitsStatusEl.className = "settings-status saved";
+  } catch (error) {
+    limitsStatusEl.textContent = `Save failed: ${errorText(error)}`;
+    limitsStatusEl.className = "settings-status error";
+  }
+});
+
+limitsResetButton.addEventListener("click", async () => {
+  try {
+    currentSettings = await saveSettings(getDefaults());
+    populateLimitsInputs(currentSettings);
+    limitsStatusEl.textContent = "Defaults restored.";
+    limitsStatusEl.className = "settings-status saved";
+  } catch (error) {
+    limitsStatusEl.textContent = `Reset failed: ${errorText(error)}`;
+    limitsStatusEl.className = "settings-status error";
+  }
+});
+
+async function initSettings() {
+  setSettingsOpen(false);
+  try {
+    cachedApiKey = await loadApiKey();
+    if (cachedApiKey) {
+      apiKeyInput.value = "••••••••••••••••";
+      apiKeyStatusEl.textContent = "Key configured.";
+      apiKeyStatusEl.className = "settings-status saved";
+    }
+  } catch (_error) {
+    cachedApiKey = null;
+  }
+  try {
+    currentSettings = await loadSettings();
+  } catch (_error) {
+    currentSettings = getDefaults();
+  }
+  populateLimitsInputs(currentSettings);
+}
+
+/* ─── Safe Browsing ─────────────────────────────── */
+
+function setSafeBrowsingChip(state, text) {
+  safeBrowsingChip.hidden = false;
+  safeBrowsingChip.className = "chip " + state;
+  safeBrowsingChip.textContent = text;
+}
+
+function resetSafeBrowsingChip() {
+  activeSafeBrowsingRequestId += 1;
+  safeBrowsingChip.hidden = true;
+  safeBrowsingChip.className = "chip";
+  safeBrowsingChip.textContent = "";
+}
+
+function renderSafeBrowsingResult(result) {
+  if (result.safe) {
+    setSafeBrowsingChip("chip-safe", "No threats");
+  } else {
+    const labels = result.threats.map((t) => t.label);
+    const unique = [...new Set(labels)];
+    setSafeBrowsingChip("chip-threat", unique.join(", "));
+  }
+}
+
+async function runSafeBrowsingCheck(inputUrl, finalUrl) {
+  if (!cachedApiKey) return;
+
+  const selected = getSelectedHistoryEntry();
+  if (selected?.safeBrowsing) {
+    renderSafeBrowsingResult(selected.safeBrowsing);
+    return;
+  }
+
+  const urls = [...new Set([inputUrl, finalUrl].filter(Boolean))];
+  if (urls.length === 0) return;
+
+  setSafeBrowsingChip("chip-sb-checking", "Checking\u2026");
+  const requestId = ++activeSafeBrowsingRequestId;
+
+  try {
+    const response = await chrome.runtime.sendMessage({ type: "check-safe-browsing", urls });
+    if (requestId !== activeSafeBrowsingRequestId) return;
+    if (!response || !response.ok) throw new Error(response?.error || "Check failed");
+
+    renderSafeBrowsingResult(response.result);
+
+    const latest = getSelectedHistoryEntry();
+    if (latest) {
+      await persistHistory(updateHistoryEntrySafeBrowsing(historyEntries, latest.id, response.result));
+    }
+  } catch (error) {
+    if (requestId !== activeSafeBrowsingRequestId) return;
+    setSafeBrowsingChip("chip-sb-error", "SB error");
+    safeBrowsingChip.title = errorText(error);
+  }
+}
+
+/* ─── History drawer ─────────────────────────────── */
+
+const setHistoryOpen = createPanelToggle(
+  "history-open", historyPanel, historyToggleButton,
+  "Hide history", "Show history"
+);
+
 function renderHistoryList() {
-  historyListEl.innerHTML = "";
+  historyListEl.textContent = "";
   if (!historyEntries.length) {
     historyEmptyEl.hidden = false;
     return;
   }
   historyEmptyEl.hidden = true;
+
+  const fragment = document.createDocumentFragment();
+  const iconSource = historyRowIconTemplate.content.firstElementChild;
 
   for (const entry of historyEntries) {
     const li = document.createElement("li");
@@ -145,11 +320,6 @@ function renderHistoryList() {
     button.dataset.historyId = entry.id;
     if (entry.id === selectedHistoryEntryId) button.classList.add("selected");
 
-    const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    icon.setAttribute("class", "history-row-icon");
-    icon.setAttribute("viewBox", "0 0 24 24");
-    icon.innerHTML = '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" fill="none" stroke="currentColor" stroke-width="1.6" />';
-
     const host = document.createElement("span");
     host.className = "history-row-host";
     host.textContent = extractDisplayHost(entry.result?.finalUrl || "") || "(unknown)";
@@ -158,7 +328,7 @@ function renderHistoryList() {
     time.className = "history-row-time";
     time.textContent = relativeTime(entry.resolvedAt);
 
-    button.append(icon, host, time);
+    button.append(iconSource.cloneNode(true), host, time);
 
     const riskLevel = entry.domainHealth?.risk?.level;
     if (riskLevel && riskLevel !== "Unknown") {
@@ -168,13 +338,11 @@ function renderHistoryList() {
     }
 
     li.append(button);
-    historyListEl.append(li);
+    fragment.append(li);
   }
-}
 
-historyToggleButton.addEventListener("click", () => {
-  setHistoryOpen(!appEl.classList.contains("history-open"));
-});
+  historyListEl.append(fragment);
+}
 
 historyListEl.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-history-id]");
@@ -190,6 +358,7 @@ async function loadHistoryEntry(entryId) {
   renderResult(entry.result);
   renderHistoryList();
   setStatus("Loaded from history.");
+  runSafeBrowsingCheck(entry.result?.inputUrl, entry.result?.finalUrl);
 }
 
 async function refreshHistory() {
@@ -207,14 +376,16 @@ async function persistHistory(next) {
 function renderResult(result) {
   resultCardEl.classList.remove("error", "loading");
   resultEl.hidden = false;
-  finalHostEl.textContent = result.finalHost || extractDisplayHost(result.finalUrl) || DASH;
+  const displayHost = result.finalHost || extractDisplayHost(result.finalUrl) || "";
+  finalHostEl.textContent = displayHost || DASH;
   finalUrlEl.href = result.finalUrl;
   finalUrlEl.textContent = result.finalUrl;
   finalUrlEl.title = result.finalUrl;
   hostChangedChip.hidden = !result.hostChanged;
+  resetSafeBrowsingChip();
   resultIconEl.classList.remove("risk-low", "risk-medium", "risk-high");
   renderHopTrail(result);
-  resetHealthForResolvedDomain(extractDisplayHost(result.finalUrl) || null);
+  resetHealthForResolvedDomain(displayHost || null);
 }
 
 function renderHopTrail(result) {
@@ -310,10 +481,10 @@ form.addEventListener("submit", async (event) => {
   resultCardEl.classList.remove("error");
   resultCardEl.classList.add("loading");
   hostChangedChip.hidden = true;
+  resetSafeBrowsingChip();
   hopTrailToggle.hidden = true;
   hopTrailEl.hidden = true;
   selectedHistoryEntryId = null;
-  renderHistoryList();
   setStatus("Resolving…");
   resetHealthForResolvedDomain(null);
   resolveButton.disabled = true;
@@ -323,10 +494,11 @@ form.addEventListener("submit", async (event) => {
     if (!response || !response.ok) throw new Error(response?.error || "Failed to resolve URL");
     renderResult(response.result);
     setStatus("");
+    runSafeBrowsingCheck(response.result.inputUrl, response.result.finalUrl);
 
     const entry = createHistoryEntry(url, response.result);
     try {
-      await persistHistory(prependResolvedEntry(historyEntries, entry));
+      await persistHistory(prependResolvedEntry(historyEntries, entry, currentSettings.maxHistoryEntries));
       selectedHistoryEntryId = entry.id;
       renderHistoryList();
     } catch (historyError) {
@@ -348,6 +520,7 @@ function showResolveError(message) {
   finalUrlEl.textContent = message;
   finalUrlEl.title = message;
   hostChangedChip.hidden = true;
+  resetSafeBrowsingChip();
   hopTrailToggle.hidden = true;
   hopTrailEl.hidden = true;
   resetHealthForResolvedDomain(null);
@@ -361,7 +534,8 @@ function createHistoryEntry(inputUrl, result) {
     inputUrl,
     resolvedAt: new Date().toISOString(),
     result: structuredClone(result),
-    domainHealth: null
+    domainHealth: null,
+    safeBrowsing: null
   };
 }
 
@@ -541,10 +715,9 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 /* ─── Init ───────────────────────────────────────── */
 
 async function init() {
-  await initTheme();
+  await Promise.all([initTheme(), initSettings(), refreshHistory()]);
   resetHealthForResolvedDomain(null);
   setHistoryOpen(false);
-  await refreshHistory();
   await consumePendingResolve();
 }
 

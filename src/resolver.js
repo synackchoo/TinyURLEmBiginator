@@ -3,9 +3,9 @@ const HEAD_FALLBACK_STATUS_CODES = new Set([405, 501]);
 const DEFAULT_MAX_HOPS = 10;
 const DEFAULT_TIMEOUT_MS = 8000;
 const LINKEDIN_INTERSTITIAL_MARKERS = [
-  "This link will take you to a page that's not on LinkedIn",
+  "This link will take you to a page that\u2019s not on LinkedIn",
   "This link will take you to a page that’s not on LinkedIn",
-  "Because this is an external link, we're unable to verify it for safety.",
+  "Because this is an external link, we\u2019re unable to verify it for safety.",
   "Because this is an external link, we’re unable to verify it for safety."
 ];
 

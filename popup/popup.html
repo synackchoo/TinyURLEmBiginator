@@ -3,13 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Tiny URL EmBiginator</title>
+    <title>RedirectCheck</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <main id="app" class="app">
       <header class="toolbar">
-        <h1 class="wordmark">Tiny URL EmBiginator</h1>
+        <h1 class="wordmark">RedirectCheck</h1>
         <div class="toolbar-actions">
           <button
             id="history-toggle-button"
@@ -24,6 +24,20 @@
               <path d="M12 5a7 7 0 1 0 6.93 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
               <path d="M12 5V2.5L8.5 5 12 7.5V5z" fill="currentColor" />
               <path d="M12 8v4.5l3 1.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+          <button
+            id="settings-toggle-button"
+            type="button"
+            class="icon-button"
+            aria-label="Show settings"
+            title="Show settings"
+            aria-expanded="false"
+            aria-controls="settings-panel"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8" />
+              <path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none" />
             </svg>
           </button>
           <button
@@ -63,6 +77,54 @@
         <ul id="history-list" class="history-list"></ul>
       </section>
 
+      <section
+        id="settings-panel"
+        class="settings-panel"
+        aria-hidden="true"
+        aria-label="Settings"
+      >
+        <div class="settings-group">
+          <label for="api-key-input" class="settings-label">Google Safe Browsing API Key</label>
+          <p class="settings-hint">
+            Get a free key from the
+            <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">Google Cloud Console</a>
+            with the Safe Browsing API enabled.
+          </p>
+          <div class="settings-row">
+            <input
+              id="api-key-input"
+              type="password"
+              class="settings-input"
+              placeholder="Paste your API key…"
+              autocomplete="off"
+            />
+            <button id="api-key-save" type="button" class="settings-save-button">Save</button>
+          </div>
+          <p id="api-key-status" class="settings-status"></p>
+        </div>
+        <div class="settings-divider"></div>
+        <div class="settings-group">
+          <span class="settings-label">Resolution Limits</span>
+          <div class="settings-field-row">
+            <label for="settings-max-hops" class="settings-field-label">Max redirects</label>
+            <input id="settings-max-hops" type="number" class="settings-number-input" min="1" max="50" />
+          </div>
+          <div class="settings-field-row">
+            <label for="settings-timeout" class="settings-field-label">Timeout (ms)</label>
+            <input id="settings-timeout" type="number" class="settings-number-input" min="1000" max="60000" step="1000" />
+          </div>
+          <div class="settings-field-row">
+            <label for="settings-max-history" class="settings-field-label">History entries</label>
+            <input id="settings-max-history" type="number" class="settings-number-input" min="5" max="500" />
+          </div>
+          <div class="settings-row">
+            <button id="settings-limits-save" type="button" class="settings-save-button">Save</button>
+            <button id="settings-limits-reset" type="button" class="settings-reset-button">Reset defaults</button>
+          </div>
+          <p id="settings-limits-status" class="settings-status"></p>
+        </div>
+      </section>
+
       <form id="resolve-form" class="resolve-form" autocomplete="off">
         <label for="url-input" class="visually-hidden">Short URL</label>
         <div class="resolve-row">
@@ -89,6 +151,7 @@
               </svg>
             </span>
             <span id="host-changed-chip" class="chip chip-warn" hidden>host changed</span>
+            <span id="safe-browsing-chip" class="chip" hidden></span>
           </header>
           <div class="result-body">
             <h2 id="final-host" class="final-host">—</h2>
@@ -174,6 +237,12 @@
 
       <div id="toast" class="toast" hidden>Copied</div>
     </main>
+    <template id="history-row-icon-template">
+      <svg class="history-row-icon" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6" />
+        <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" fill="none" stroke="currentColor" stroke-width="1.6" />
+      </svg>
+    </template>
     <script type="module" src="popup.js"></script>
   </body>
 </html>

@@ -1,12 +1,12 @@
-# Privacy Policy for Tiny URL EmBiginator
+# Privacy Policy for RedirectCheck
 
 Effective date: April 15, 2026
 
-Tiny URL EmBiginator is a Chrome extension that reveals where shortened URLs lead without opening them in a new tab.
+RedirectCheck is a Chrome extension that reveals where shortened URLs lead without opening them in a new tab.
 
 ## Single Purpose
 
-Tiny URL EmBiginator has a single purpose: to resolve shortened or redirecting URLs to their final destination, and to optionally provide certificate-history and domain-registration context for that destination, so users can decide whether a link is safe to visit.
+RedirectCheck has a single purpose: to resolve shortened or redirecting URLs to their final destination, and to optionally provide certificate-history and domain-registration context for that destination, so users can decide whether a link is safe to visit.
 
 ## Scope
 
@@ -16,7 +16,7 @@ For Chrome Web Store disclosure purposes, the only category of user data this ex
 
 The extension processes the following Website Content only when the user explicitly asks it to resolve a link or check a domain:
 
-- The URL or link content the user submits — either by typing/pasting it into the popup, or by right-clicking a link on a webpage and selecting *"Resolve with Tiny URL EmBiginator"*.
+- The URL or link content the user submits — either by typing/pasting it into the popup, or by right-clicking a link on a webpage and selecting *"Resolve with RedirectCheck"*.
 - The redirect steps and final destination URL returned while resolving that link.
 - Optional domain-registration and certificate-history details retrieved for the resolved domain when the user clicks *Check Domain Health*.
 
@@ -30,7 +30,7 @@ This locally stored data never leaves the user's device, is never sent to the de
 
 ## How the Information Is Used
 
-Tiny URL EmBiginator uses Website Content only to provide the extension's requested functionality:
+RedirectCheck uses Website Content only to provide the extension's requested functionality:
 
 - Resolve shortened URLs and follow their redirect chain.
 - Display the redirect hops and the final destination.
@@ -44,7 +44,7 @@ The extension declares the minimum permissions needed for its single purpose. Ea
 | Permission | Justification |
 |---|---|
 | `storage` | Used to persist resolved-link history, cached domain-health snapshots, and the user's theme preference in `chrome.storage.local`. All data stays on the user's device. |
-| `contextMenus` | Used to register a *"Resolve with Tiny URL EmBiginator"* item in the right-click menu when the user right-clicks a hyperlink. The menu entry only appears on link contexts and only fires when the user clicks it. |
+| `contextMenus` | Used to register a *"Resolve with RedirectCheck"* item in the right-click menu when the user right-clicks a hyperlink. The menu entry only appears on link contexts and only fires when the user clicks it. |
 | `host_permissions: <all_urls>` (`http://*/*` and `https://*/*`) | Required so the extension's background service worker can issue HTTP requests to arbitrary short-link destinations on the user's behalf. The extension only initiates these requests when the user explicitly asks it to resolve a URL or check a domain. The extension does not use content scripts, does not read the contents of pages the user visits, does not track browsing history, and does not modify any page. |
 
 ## Sharing and External Requests
@@ -61,7 +61,7 @@ These third-party services may receive the URL or domain needed to fulfill the u
 
 ## What the Extension Does Not Do
 
-Tiny URL EmBiginator does not:
+RedirectCheck does not:
 
 - Collect, sell, transfer, or share personal information with the developer or any third party.
 - Use user data for advertising, marketing, or creditworthiness assessment.
@@ -85,4 +85,4 @@ If this privacy policy changes, the updated version will be posted with a new ef
 
 ## Contact
 
-For privacy questions or support, use the contact information provided in the Chrome Web Store listing for Tiny URL EmBiginator.
+For privacy questions or support, use the contact information provided in the Chrome Web Store listing for RedirectCheck.

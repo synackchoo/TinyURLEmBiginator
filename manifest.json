@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Tiny URL EmBiginator",
+  "name": "RedirectCheck",
   "description": "Reveal where shortened URLs really lead without opening them in a tab.",
   "version": "0.3.0",
   "icons": {
@@ -15,7 +15,7 @@
     "type": "module"
   },
   "action": {
-    "default_title": "Tiny URL EmBiginator",
+    "default_title": "RedirectCheck",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
